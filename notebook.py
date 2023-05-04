@@ -1,5 +1,7 @@
 #importing required packages and libraries
 import re
+import threading
+from threading import Timer
 from tkinter import *
 from tkinter.ttk import *
 from datetime import datetime
@@ -17,6 +19,43 @@ notepad = ScrolledText(root, width = 90, height = 40, background = "#333333", fo
 fileName = ' '
 notepad.tag_config('function', foreground='blue')
 
+#functions for text editor 
+
+class RepeatedTimer():
+    def __init__(self, interval, function, *args, **kwargs):
+        self._timer = None
+        self.interval = interval
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+        self.is_running = False
+        self.start()
+    
+    def _run(self):
+        self.is_running = False
+        self.start()
+        self.function(*self.args, **self.kwargs)
+
+    def start(self):
+        if not self.is_running:
+            self._timer = Timer(self.interval, self._run)
+            self._timer.start()
+            self.is_running = True
+
+    def stop(self):
+        self._timer.cancel()
+        self.is_running = False
+
+def applyTags():
+    data = notepad.get('1.0', END)
+    notepad.delete(0.0, END)
+    SplitData = data.split()
+    for word in SplitData:
+        if word == "def":
+            notepad.insert(END, ' ' + word, 'function')
+        else:
+            notepad.insert(END, ' ')
+            notepad.insert(END, word)
 
 #defining functions for commands
 def cmdNew():     #file menu New option
@@ -27,16 +66,6 @@ def cmdNew():     #file menu New option
         else:
             notepad.delete(0.0, END)
     root.title("Notepad")
-def applyTags(event):
-    data = notepad.get('1.0', END)
-    notepad.delete(0.0, END)
-    SplitData = data.split()
-    for word in SplitData:
-        if word == "def":
-            notepad.insert(END, ' ' + word, 'function')
-        else:
-            notepad.insert(END, ' ')
-            notepad.insert(END, word)
 
 def cmdOpen():     #file menu Open option
     fd = filedialog.askopenfile(parent = root, mode = 'r')
@@ -158,9 +187,15 @@ editMenu.add_command(label='Time/Date', command = cmdTimeDate)
 helpMenu = Menu(notepadMenu, tearoff = False)
 notepadMenu.add_cascade(label='Help', menu = helpMenu)
 
+
+#using threading to automatically change font color
+auto_apply_tags = RepeatedTimer(5, applyTags)
+
+
 #adding options in help menu
 helpMenu.add_command(label='About Notepad', command = cmdAbout)
 root.bind('<Control-s>', cmdSave)
-root.bind('<Control-g>', applyTags)
+#root.bind('<Control-g>', applyTags) manual control of font change
 notepad.pack()
 root.mainloop()
+auto_apply_tags.stop()
